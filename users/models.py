@@ -115,7 +115,10 @@ class PasswordsHistory(models.Model):
 
 
 class Log(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='logs')
     action = models.CharField(
         max_length=9,
         choices=ACTION

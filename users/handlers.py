@@ -1,4 +1,4 @@
-from .helpers import send_verification_email_to_user, write_log
+from .repository import send_verification_email_to_user, write_log
 from .models import SignupRequest
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -13,7 +13,7 @@ def send_verification_email(sender, instance, created, **kwargs):
 
 @receiver(user_logged_in)
 def user_logged_in_handler(user=None, status=None, **kwargs):
-    print('USER LOGGED IN')
+    print('USER LOGGED IN: {}'.format(status))
     write_log(user=user, action=LOGIN, status=status)
 
 

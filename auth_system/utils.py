@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime, timedelta
 
@@ -64,3 +65,18 @@ def get_from_cookies_by_name(cookies, name):
         pass
     finally:
         return token
+
+
+def is_json(data):
+    try:
+        json.loads(data)
+    except:
+        return False
+    return True
+
+def is_UUID(token):
+    try:
+        token = uuid.UUID(token)
+    except:
+        return False
+    return True

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from validate_email import validate_email
 
 from auth_system.utils import check_if_new_password_valid
-from ..models import SignupRequest, PasswordsHistory, User
+from ..models import SignupRequest, User
 
 
 class LoginSerializer(serializers.Serializer):
@@ -72,6 +72,14 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'first_name',
+            'last_name', 'email')
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_pass = serializers.CharField(
         max_length=150,
@@ -103,13 +111,13 @@ class ChangePasswordSerializer(serializers.Serializer):
         # Check if the password is correct
         if not user.check_password(old_pass):
             raise serializers.ValidationError(
-                'The old password is not correct'
+                'The current password is not correct!'
             )
         # Check if the new password is different from 5 latest passwords
         if not check_if_new_password_valid(user, new_pass):
             raise serializers.ValidationError(
                 'Your new password must be different from the 5 latest \
-                passwords'
+                passwords!'
             )
         return data
 
