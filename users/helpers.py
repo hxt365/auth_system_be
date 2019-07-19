@@ -1,7 +1,7 @@
 import json
 
 from django.conf import settings
-from rest_framework import status
+from rest_framework import status, serializers
 
 from auth_system.utils import is_json, set_cookie
 from users.constants import SUCCESS, FAIL
@@ -46,3 +46,11 @@ def set_auth_cookie(res, access_token, refresh_token):
         expires_in=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
     )
     return res
+
+
+def check_password_is_correct(password, user):
+    if not user.check_password(password):
+        raise serializers.ValidationError(
+            'The current password is not correct!'
+        )
+

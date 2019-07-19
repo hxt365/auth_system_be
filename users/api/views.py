@@ -9,9 +9,8 @@ from oauth2_provider.views.base import TokenView
 from rest_framework import views, generics, permissions
 from rest_framework.exceptions import ValidationError
 
-from users import services
-from users.services import config_login_request, config_refresh_request, create_auth_response
-from users.helpers import get_request_data
+from users import services, helpers
+from users.services import account_not_yet_verified
 from .serializers import (
     LoginSerializer,
     SignUpSerializer,
@@ -26,31 +25,33 @@ USER = get_user_model()
 class LoginApiView(CsrfExemptMixin, TokenView):
     @method_decorator(sensitive_post_parameters('password'))
     def post(self, request, *args, **kwargs):
-        data = get_request_data(request)
+        data = helpers.get_request_data(request)
         serializer = LoginSerializer(data=data)
         try:
             if serializer.is_valid(raise_exception=True):
-                return self.login(request=request, data=serializer.validated_data)
+                return \
+                    account_not_yet_verified(data) \
+                    or self.login(request=request, data=serializer.validated_data)
         except ValidationError as e:
             msg = json.dumps(e.detail)
             return HttpResponse(content=msg, status=400)
 
     def login(self, request, data):
-        request = config_login_request(
+        request = services.config_login_request(
             request=request,
             username=data['username'],
             password=data['password'])
         print(request.POST)
         url, headers, body, status = self.create_token_response(request)
-        return create_auth_response(body, headers, status, data)
+        return services.create_auth_response(body, headers, status, data)
 
 
 class RefreshApiView(CsrfExemptMixin, TokenView):
     @method_decorator(sensitive_post_parameters('password'))
     def post(self, request, *args, **kwargs):
-        request = config_refresh_request(request)
+        request = services.config_refresh_request(request)
         url, headers, body, status = self.create_token_response(request)
-        return create_auth_response(body, headers, status)
+        return services.create_auth_response(body, headers, status)
 
 
 class SignUpApiView(CsrfExemptMixin, generics.CreateAPIView):

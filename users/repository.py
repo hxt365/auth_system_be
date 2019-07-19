@@ -97,7 +97,7 @@ def send_verification_email_to_user(user, resend=False):
     message = """
         From: Teko  company
         To: {}
-        http://127.0.0.1:8000/api/auth/email/{}/
+        http://127.0.0.1:3000/confirm-email/{}/
     """.format(user.email, token.token)
     user.send_email(message)
 
@@ -112,6 +112,11 @@ def write_log(user, action, status):
 
 def get_user_by_username(username):
     qs = USER.objects.filter(username=username)
+    return qs.first()
+
+
+def get_signup_request_by_username(username):
+    qs = SignupRequest.objects.filter(username=username)
     return qs.first()
 
 

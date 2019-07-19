@@ -1,19 +1,34 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser, AbstractBaseUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.contrib.auth.base_user import BaseUserManager
+from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
+from django.core.validators import RegexValidator
 from async_tasks.tasks import async_send_mail
 from .constants import *
 
 
 class User(AbstractUser):
-    first_name = models.CharField(_('first name'), max_length=30, )
-    last_name = models.CharField(_('last name'), max_length=30, )
+    username_validator = UnicodeUsernameValidator()
+    only_letters = RegexValidator(r'^[A-Za-z]+$', 'Only letters are allowed.')
+
+    username = models.CharField(
+        _('username'),
+        max_length=150,
+        unique=True,
+        help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
+        validators=[username_validator, MinLengthValidator(6), ],
+        error_messages={
+            'unique': _("A user with that username already exists."),
+        },
+    )
+    password = models.CharField(_('password'), max_length=128, validators=[MinLengthValidator(6)])
+    first_name = models.CharField(_('first name'), max_length=30, validators=[only_letters])
+    last_name = models.CharField(_('last name'), max_length=30, validators=[only_letters])
     email = models.EmailField(unique=True)
 
     def send_email(self, message):
@@ -45,19 +60,21 @@ class SignupRequestManager(BaseUserManager):
 
 class SignupRequest(AbstractBaseUser):
     username_validator = UnicodeUsernameValidator()
+    only_letters = RegexValidator(r'^[A-Za-z]+$', 'Only letters are allowed.')
 
     username = models.CharField(
         _('username'),
         max_length=150,
         unique=True,
         help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
-        validators=[username_validator],
+        validators=[username_validator, MinLengthValidator(6), ],
         error_messages={
             'unique': _("A user with that username already exists."),
         },
     )
-    first_name = models.CharField(_('first name'), max_length=30, )
-    last_name = models.CharField(_('last name'), max_length=30, )
+    password = models.CharField(_('password'), max_length=128, validators=[MinLengthValidator(6)])
+    first_name = models.CharField(_('first name'), max_length=30, validators=[only_letters])
+    last_name = models.CharField(_('last name'), max_length=30, validators=[only_letters])
     email = models.EmailField()
     is_verified = models.BooleanField(default=False)
 
