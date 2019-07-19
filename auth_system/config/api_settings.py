@@ -1,3 +1,5 @@
+from decouple import config, Csv
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
@@ -11,17 +13,11 @@ REST_FRAMEWORK = {
 
 # CORS settings
 
-CORS_ORIGIN_WHITELIST = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
+CORS_ORIGIN_WHITELIST = config('CORS_ORIGIN_WHITELIST', cast=Csv())
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv())
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', cast=bool)
 
 
 # Oauth2 settings
@@ -33,13 +29,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend'
 )
 
-ACCESS_TOKEN_EXPIRE_SECONDS = 1800
-REFRESH_TOKEN_EXPIRE_SECONDS = 1800
+ACCESS_TOKEN_EXPIRE_SECONDS = config('ACCESS_TOKEN_EXPIRE_SECONDS', cast=int)
+REFRESH_TOKEN_EXPIRE_SECONDS = config('REFRESH_TOKEN_EXPIRE_SECONDS', cast=int)
 
-CLIENT_ID = 'owlFtMLr96BO4LAuBEvP0FWS79T8pPZUwO2jCzRn'
-CLIENT_SECRET = 'dE5WJu75vAtN2SiudlM0DEKqiuOrIwPl24mpogU3ZXYp8XnEZEZwSoNjkRplma' \
-                'i2xv5EtzTLuoUfi1qS2YQyqODOK7yUsiP5WXIT334ZYjdD2ZdIJtNaZWcizH5R7Mzy'
-
-API_LOGIN = 'http://127.0.0.1:8000/o/token/'
-API_REGISTER = 'http://127.0.0.1:8000/o/token/'
-API_REFRESH = 'http://127.0.0.1:8000/o/token/'
+CLIENT_ID = config('CLIENT_ID')
+CLIENT_SECRET = config('CLIENT_SECRET')

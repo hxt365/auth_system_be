@@ -41,7 +41,7 @@ class LoginApiView(CsrfExemptMixin, TokenView):
             request=request,
             username=data['username'],
             password=data['password'])
-        print(request.POST)
+        user = USER.objects.all().first()
         url, headers, body, status = self.create_token_response(request)
         return services.create_auth_response(body, headers, status, data)
 

@@ -68,16 +68,19 @@ class UserSerializer(serializers.ModelSerializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_pass = serializers.CharField(
         max_length=150,
+        min_length=6,
         required=True,
         write_only=True,
     )
     new_pass = serializers.CharField(
         max_length=150,
+        min_length=6,
         required=True,
         write_only=True,
     )
     new_pass_2 = serializers.CharField(
         max_length=150,
+        min_length=6,
         required=True,
         write_only=True,
     )
