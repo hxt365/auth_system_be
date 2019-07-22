@@ -73,8 +73,8 @@ class SignupRequest(AbstractBaseUser):
         },
     )
     password = models.CharField(_('password'), max_length=128, validators=[MinLengthValidator(6)])
-    first_name = models.CharField(_('first name'), max_length=30, validators=[only_letters])
-    last_name = models.CharField(_('last name'), max_length=30, validators=[only_letters])
+    first_name = models.CharField(_('first name'), max_length=15, validators=[only_letters])
+    last_name = models.CharField(_('last name'), max_length=15, validators=[only_letters])
     email = models.EmailField()
     is_verified = models.BooleanField(default=False)
 

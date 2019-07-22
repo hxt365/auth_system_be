@@ -153,7 +153,7 @@ class AuthAPITestCase(BaseTest):
     def test_signup_with_username_more_than_150_characters_then_400_bad_request(self):
         url = api_reverse('api_auth:signup')
         data = {
-            'username': '1' * 200,
+            'username': '1' * 151,
             'email': 'hxt365@gmail.com',
             'first_name': 'Truong',
             'last_name': 'Hoang',
@@ -196,8 +196,8 @@ class AuthAPITestCase(BaseTest):
             'email': 'hxt365@gmail.com',
             'first_name': 'Truong',
             'last_name': 'Hoang',
-            'password': '1' * 200,
-            'password_2': '1' * 200,
+            'password': '1' * 151,
+            'password_2': '1' * 151,
         }
         res = self.client.post(url, data, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
