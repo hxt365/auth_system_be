@@ -1,16 +1,20 @@
 import json
 
+import requests
 from django.conf import settings
+from django.core.cache import cache
+from django.http import HttpResponse
 from rest_framework import status as status_code
 from rest_framework.response import Response
-from django.http import HttpResponse
-
+from decouple import config
+import users.repository
 from auth_system.utils import get_from_cookies_by_name
 from auth_system.utils import is_UUID
 from users import helpers, repository
 from users.api.serializers import UserSerializer
 from users.constants import *
-from .repository import get_user_by_username
+from users.helpers import get_fail_status
+from .repository import get_user_by_username, lock_user
 
 
 def verify_email(token):
@@ -19,11 +23,16 @@ def verify_email(token):
             data="Invalid token",
             status=400,
         )
-    valid = repository.verify_email_by_token(token)
+    valid, expired = repository.verify_email_by_token(token)
     if valid:
         return Response(
             data="Successfully verified",
             status=200,
+        )
+    elif expired:
+        return Response(
+            data="Token expired",
+            status=400,
         )
     else:
         return Response(
@@ -41,7 +50,7 @@ def reset_password(data):
             To: {}
             New password: {}""".format(user.email, new_password)
     user.send_email(message)
-    helpers.send_signal(action=RESET_PW, status_code=200, user=user)
+    users.repository.send_signal(action=RESET_PW, status_code=200, user=user)
     return Response(data='Resetted password', status=200)
 
 
@@ -50,13 +59,13 @@ def change_password(new_password, user):
         user=user,
         new_password=new_password,
     )
-    helpers.send_signal(action=CHANGE_PW, status_code=200, user=user)
+    users.repository.send_signal(action=CHANGE_PW, status_code=200, user=user)
     return Response(data='Changed password', status=200)
 
 
 def logout(user):
     repository.clear_tokens(user)
-    helpers.send_signal(action=LOGOUT, status_code=200, user=user)
+    users.repository.send_signal(action=LOGOUT, status_code=200, user=user)
     return Response(data='Logged out successfully', status=200)
 
 
@@ -82,7 +91,9 @@ def config_refresh_request(request):
 
 
 def create_auth_response(body, headers, status, data={}):
-    response = HttpResponse(content=body, status=status)
+    if not check_captcha(data):
+        body = "Captcha is not correct!"
+        status = status_code.HTTP_400_BAD_REQUEST
     if status == status_code.HTTP_200_OK:
         loaded_body = json.loads(body)
         access_token = loaded_body.get('access_token')
@@ -91,20 +102,41 @@ def create_auth_response(body, headers, status, data={}):
         payload = json.dumps(UserSerializer(user).data)
         response = HttpResponse(content=payload, status=status)
         response = helpers.set_auth_cookie(response, access_token, refresh_token)
-        helpers.send_signal(action=LOGIN, status_code=status, user=user)
+        users.repository.send_signal(action=LOGIN, status_code=status, user=user)
     else:
-        helpers.send_signal(action=LOGIN, status_code=status, username=data.get('username'))
-        # login_failed(status_code=res.status_code, username=data['username'])
+        username = data.get('username')
+        user = get_user_by_username(username)
+        body = "Password or username is not correct!"
+        if user:
+            users.repository.send_signal(action=LOGIN, status_code=status, username=username)
+            status = get_fail_status(status, user)
+            lock_or_catpcha(status, user, username)
+        response = HttpResponse(content=body, status=status)
 
     for k, v in headers.items():
         response[k] = v
     return response
 
 
-def account_not_yet_verified(data):
-    user = helpers.get_user_by_username(username=data['username'])
-    if not user:
-        unverified_user = repository.get_signup_request_by_username(username=data['username'])
-        if unverified_user:
-            return HttpResponse(content="Please confirm your account first", status=403)
-    return None
+def check_captcha(data):
+    username = data.get('username')
+    if username:
+        user_status = cache.get(username)
+        if user_status == 'CAPTCHA':
+            res = requests.post(
+                url='https://www.google.com/recaptcha/api/siteverify',
+                data={
+                    'secret': config('RECAPTCHA_KEY'),
+                    'response': data.get('captcha'),
+                }, );
+            content = json.loads(res.content)
+            return content['success']
+    return True
+
+
+def lock_or_catpcha(status, user, username):
+    if status == status_code.HTTP_423_LOCKED:
+        lock_user(user)
+        cache.set(username, 'LOCKED', settings.CACHE_TTL)
+    elif status == status_code.HTTP_429_TOO_MANY_REQUESTS:
+        cache.set(username, 'CAPTCHA', 60*5)

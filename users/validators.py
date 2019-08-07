@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from . import helpers
+from . import repository
 
 from auth_system.utils import check_if_new_password_valid
 from users.models import User
@@ -37,7 +37,7 @@ def validate_password_differs_from_5_lastest(password, user):
         )
 
 def validate_username_is_already_used(username):
-    user = helpers.get_user_by_username(username)
+    user = repository.get_user_by_username(username)
     if user:
         raise serializers.ValidationError(
             'Username was taken'

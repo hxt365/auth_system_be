@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from oauth2_provider.models import (
     get_access_token_model,
     get_refresh_token_model,
@@ -8,6 +9,11 @@ from rest_framework import status
 
 from auth_system.utils import random_password
 from users.constants import *
+from users.constants import SUCCESS, FAIL
+from users.signals import signals
+from . import helpers
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 USER = get_user_model()
 SignupRequest = apps.get_model('users', 'SignupRequest')
@@ -58,11 +64,11 @@ def check_email_token(token):
     :param token:
     :return:
     """
-    qs = SignupRequest.objects.filter(token__token=token)
+    qs = SignupRequest.objects.select_related('token').filter(token__token=token)
     if qs.exists():
         user = qs.first()
-        if user.is_verified:
-            return False, None
+        if user.is_verified or not helpers.in_time(user.token.timestamp, 30):
+            return False, user
         return True, user
     return False, None
 
@@ -85,7 +91,8 @@ def verify_email_by_token(token):
             content=user.password
         )
         SignupRequest.objects.filter(email=user.email).exclude(username=user.username).delete()
-    return valid
+    # valid and expired or not
+    return valid, True if unofficial_user else False
 
 
 def send_verification_email_to_user(user, resend=False):
@@ -93,13 +100,27 @@ def send_verification_email_to_user(user, resend=False):
         user.token.delete()
     token = Token(user=user)
     token.save()
-
-    message = """
-        From: Teko  company
-        To: {}
-        http://127.0.0.1:3000/confirm-email/{}/
-    """.format(user.email, token.token)
-    user.send_email(message)
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Verify your Teko account"
+    text = """\
+    Link to verify your account: http://127.0.0.1:3000/confirm-email/{}/
+    The token is expiring in 30 minutes. 
+    """.format(token.token)
+    html = """\
+    <html>
+      <body>
+        <p>Hi,<br>
+           <a href="http://localhost:3000/confirm-email/{}/">Click here</a> 
+           to verify your account. The token is expiring in 30 minutes.
+        </p>
+      </body>
+    </html>
+    """.format(token.token)
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+    message.attach(part1)
+    message.attach(part2)
+    user.send_email(message.as_string())
 
 
 def write_log(user, action, status):
@@ -140,3 +161,27 @@ def get_user_by_access_token(access_token):
     AccessToken = get_access_token_model()
     user = AccessToken.objects.get(token=access_token).user
     return user
+
+
+def lock_user(user):
+    user.is_active = False
+    user.save()
+
+
+def account_is_locked(username, **kwargs):
+    status = cache.get(username)
+    user = get_user_by_username(username)
+    if not status and user and not user.is_active:
+        user.is_active = True
+        user.save()
+
+
+def send_signal(action, status_code, user=None, username=None):
+    if not user and not username:
+        return
+    if username:
+        user = get_user_by_username(username)
+    if status.is_success(status_code):
+        signals[action].send(sender=user.__class__, user=user, status=SUCCESS)
+    else:
+        signals[action].send(sender=user.__class__, user=user, status=FAIL)

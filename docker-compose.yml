@@ -16,6 +16,12 @@ services:
       - ./volumes/mysql:/var/lib/mysql
     ports:
       - "${DATABASE_PORT}:3306"
+  redis:
+    image: 'redis'
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - 'redis_data:/data'
   app:
     build:
       context: .
@@ -30,3 +36,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - redis
+
+volumes:
+  redis_data:

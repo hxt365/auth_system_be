@@ -13,6 +13,7 @@ class LoginSerializer(serializers.Serializer):
         required=True,
         write_only=True,
     )
+    captcha = serializers.CharField(max_length=350)
 
 
 class SignUpSerializer(serializers.ModelSerializer):

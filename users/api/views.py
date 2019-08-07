@@ -10,7 +10,8 @@ from rest_framework import views, generics, permissions
 from rest_framework.exceptions import ValidationError
 
 from users import services, helpers
-from users.services import account_not_yet_verified
+from users.helpers import account_not_yet_verified
+from users.repository import account_is_locked
 from .serializers import (
     LoginSerializer,
     SignUpSerializer,
@@ -18,7 +19,7 @@ from .serializers import (
     ChangePasswordSerializer,
 )
 from ..models import SignupRequest
-
+from django.core.cache import cache
 USER = get_user_model()
 
 
@@ -29,6 +30,9 @@ class LoginApiView(CsrfExemptMixin, TokenView):
         serializer = LoginSerializer(data=data)
         try:
             if serializer.is_valid(raise_exception=True):
+                data = serializer.data
+                # cache.delete(data['username'])
+                account_is_locked(**data)
                 return \
                     account_not_yet_verified(data) \
                     or self.login(request=request, data=serializer.validated_data)
@@ -41,7 +45,6 @@ class LoginApiView(CsrfExemptMixin, TokenView):
             request=request,
             username=data['username'],
             password=data['password'])
-        user = USER.objects.all().first()
         url, headers, body, status = self.create_token_response(request)
         return services.create_auth_response(body, headers, status, data)
 

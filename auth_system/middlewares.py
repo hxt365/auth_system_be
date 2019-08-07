@@ -19,3 +19,4 @@ class CookieOAuthMiddleware:
                     'Bearer %s' % access_token
         response = self.get_response(request)
         return response
+

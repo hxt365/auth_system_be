@@ -93,8 +93,12 @@ WSGI_APPLICATION = 'auth_system.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DATABASE_NAME'),
+        'USER': config('DATABASE_USER'),
+        'PASSWORD': config('DATABASE_PASSWORD'),
+        'HOST': config('DATABASE_HOST'),
+        'PORT': config('APP_DATABASE_PORT'),
     }
 }
 
@@ -146,3 +150,26 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
 # Test
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+# Time (minutes)
+
+LOGIN_TIME_LEVEL_1 = 5
+LOGIN_TIME_LEVEL_2 = 10
+
+# CACHING
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": config('CACHE_LOCATION'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+        },
+    }
+}
+CACHE_TTL = 900
+
+# SESSION
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"

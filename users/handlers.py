@@ -1,9 +1,10 @@
-from .repository import send_verification_email_to_user, write_log
-from .models import SignupRequest
+from django.core.cache import cache
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+from .models import SignupRequest
+from .repository import send_verification_email_to_user, write_log
 from .signals import *
-from rest_framework import status as status_code
 
 
 @receiver(post_save, sender=SignupRequest)
@@ -14,9 +15,9 @@ def send_verification_email(sender, instance, created, **kwargs):
 
 @receiver(user_logged_in)
 def user_logged_in_handler(user=None, status=None, **kwargs):
-    # print('USER LOGGED IN: {}'.format(status))
-    if status == status_code.HTTP_200_OK:
-        write_log(user=user, action=LOGIN, status=status)
+    if status == SUCCESS:
+        cache.delete(user.username)
+    write_log(user=user, action=LOGIN, status=status)
 
 
 @receiver(user_logged_out)
@@ -35,5 +36,3 @@ def user_reset_password_handler(user=None, status=None, **kwargs):
 def user_changed_password_handler(user=None, status=None, **kwargs):
     # print('USER CHANGED PASSWORD')
     write_log(user=user, action=CHANGE_PW, status=SUCCESS)
-
-
